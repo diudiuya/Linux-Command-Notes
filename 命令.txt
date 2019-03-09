@@ -7,8 +7,11 @@ ctrl + b    左
 ctrl + f    右
 ctrl + u    删除光标前的字符
 ctrl + d    删除光标后的字符
+ctrl + w    清楚光标前的一段，空格间隔
+ctrl + y    撤销删除
 ctrl + e    行尾
 ctrl + a    行首
+ctrl + r    搜索输入记录
 
 
 
