@@ -243,6 +243,7 @@ ctrl + r    搜索输入记录
 3#chmod    修改文件/目录权限（可读:4，可写:2，执行:1）
 *(u/g/o/a)(+/-/=)(r/w/x)    如a=r,即全部改为可读
 *-R                     ――递归更改，更改包括子文件
+!文件名
 
 
 2#adduser    添加用户（ubuntu下会自动为创建的用户指定主目录、系统shell版本，会在创建时输入用户密码；centos下一样）
@@ -286,6 +287,24 @@ ctrl + r    搜索输入记录
 *-u    输入当前用户ID
 !用户名
 
+3#setfacl    设置/修改acl
+*-x    移除acl权限（移除掩码前需将其他所有权限移除后设置为"m::"即可）
+*-m    添加/修改acl权限
+*-b    清楚所有acl权限
+*[u|g|m] : [用户名|组名] : [r|w|x]    (u对象为用户，g对象为群组，m为mask)
+!文件名
+例：setfacl -m u:username:rwx file.txt    为username用户添加对file.txt文件的rwx权限
+例：setfacl -x u:username file.txt    将username用户对file.txt的特权移除
+例：setfacl -m m::u file.txt    设置file.txt文件的掩码，特权会与掩码按位与运算后再生效
+例：setfacl -b file.txt    将file.txt文件的所有acl权限清楚
+
+2#getfacl    查看acl权限
+!文件名
+
+12#lsattr    查看文件的文件属性
+! 文件名
+
+
 
 
 用法1：指令
@@ -293,20 +312,4 @@ ctrl + r    搜索输入记录
 用法3：指令 [选项] [操作对象]
 用法4：指令 [选项]
 用法5：指令 [操作对象] [选项]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
