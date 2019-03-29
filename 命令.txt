@@ -265,7 +265,7 @@ ctrl + r    搜索输入记录
 12#passwd    设置/修改密码（默认是点前用户）
 !用户名
 
-2#usermod   修改/追加组
+2#usermod   为用户修改/追加组
 *-d    修改home目录
 *-g    修改主要组(gid)
 *-G    修改所在组(groups)
@@ -294,8 +294,8 @@ ctrl + r    搜索输入记录
 *[u|g|m] : [用户名|组名] : [r|w|x]    (u对象为用户，g对象为群组，m为mask)
 !文件名
 例：setfacl -m u:username:rwx file.txt    为username用户添加对file.txt文件的rwx权限
-例：setfacl -x u:username file.txt    将username用户对file.txt的特权移除
-例：setfacl -m m::u file.txt    设置file.txt文件的掩码，特权会与掩码按位与运算后再生效
+例：setfacl -x u:username file.txt    将username用户对file.txt的acl权限移除
+例：setfacl -m m::u file.txt    设置file.txt文件的掩码，acl权限会与掩码按位与运算后再生效
 例：setfacl -b file.txt    将file.txt文件的所有acl权限清楚
 
 2#getfacl    查看acl权限
@@ -304,7 +304,205 @@ ctrl + r    搜索输入记录
 12#lsattr    查看文件的文件属性
 ! 文件名
 
+#chattr    设置文件的文件属性（root也受限）
+*[=-+]
+*a    只可以对文件进行追加操作（不允许移动、删除等操作）
+*i    不可以对文件操作
 
+13#lastlog    查看用户最后一次的登录信息
+*-u    指定用户
+!用户名
+
+12#last    查看用户历史登录信息
+!用户名
+
+12#lastb    查看用户的登录失败记录（写在/var/log/btmp文件中）
+!用户名
+
+12#finger    查看用户综合信息（需安装）
+!用户名
+
+1#runlevel    查看点前运行级别（详细man）
+	/etc/rc*.d    文件对应每个运行级别，每个文件下都有对应的自启动服务
+					S开头为开机启动，K开头为关机运行
+
+#systemctl    
+*list-unit-files    查看全部已安装的服务
+*--type=*           类型
+	例： systemctl list-unit-files --type=service
+			查看所有服务器服务（enabled是自启动程序）
+
+1#w    查看当前登录的用户、ip及正在执行的命令（就一个字母w）
+
+#top    查看当前启动的进程（具体参数百度）
+
+
+
+用法1：指令
+用法2：指令 [操作对象]
+用法3：指令 [选项] [操作对象]
+用法4：指令 [选项]
+用法5：指令 [操作对象] [选项]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+查看特权数: cat /prooc/sys/kernel/cap_last_cap
+特权详细： man capabilities
+setcap    为程序设置特权
+*-f    收回程序权限
+*CAP_DAC_OVERRIDE    绕过wrx权限执行
+*CAP_NET_BIND_SERVICE    可绑定1024以下的端口
+*...    更多查看详细
+!程序名
+
+
+审计：
+日志的位置
+    /var/log/audit/audit.log
+设计的配置
+	/etc/audit/audit.conf  audit.rules
+ 		audit.conf    主要是控制审计服务的启动参数
+		audit.rules    控制审计服务关注的规则
+34#auditctl    查询和配置审计规则
+*-l    列出审计规则
+*-s    审计运行状态
+*-w 需审计的对象 -p 权限rwxa -k key值用于标识    临时添加审计规则，重启审计后失效
+
+3#ausearch    查看审计日志信息
+*-k    以关键字为索引查询
+*-f    以文件名为索引查询
+*-ui    以用户id为索引查询
+!key值(设置规则时给的那个)
+!文件名
+!uid(用户ID)
+
+14#aureport    生成审计报告
+*-au    与鉴权相关的报告
+*-m    与用户相关的报告
+
+
+嗅探：
+12#tcpdump    
+	linux命令行下使用的嗅探工具
+	(详细参数信息查看man pcap-filter)
+	条件之间可以使用与或非（and或&&，or或||，not或！）
+*-v -vv    显示详细和更详细的的信息
+*-i    指定网络接口（网卡）
+*-w    将数据保存到指定文件，(.pcap)后缀
+*host    指定ip、域名
+*src host    指定 发送端 ip、域名
+*dst host    指定 接收端 ip、域名
+*port    指定端口
+*src port    指定发送端端口
+*dst port    指定接收端端口
+!ip、域名
+!端口号
+!协议
+
+
+#chsh    更改shell
+*-s    指定新shell路径
+!用户名
+
+
+防火墙：
+#iptables    有4表5链N规则（重启操作系统时默认清除所有规则）
+	语法: iptables [-t table] COMMAND chain CRITERIA -j TARGET
+*-L    查看已设置的规则(-n,以点分十进制显示ip；--line-numbers，显示行号)
+*-P    设置链默认策略为拒绝或接收（DROP|ACCEPT）
+*-A    在链中追加规则
+*-j    达成条件后的行为 拒绝或接收（DROP|ACCEPT）
+*-D    删除指定规则（可以填序号、也可以填条件）
+*-I    在链中插入规则（和-A好像差不多，不过可以指定位置，即序号）
+*-R    替换规则（需指定序号）
+*-F    清空所有规则
+*-p    协议
+*-s    指定源ip、网络号192.168.111.129  192.168.111.0/24
+*-d    指定目标ip、网络号
+*--sport    指定源端口（可以两个数字之间以“-”横岗间隔表示区间，下面一样）
+*--dport    指定目标端口（指定）
+*--icmp-type    指定icmp的类型，常用（0，8）详见man icmp
+*-i    从网卡流入数据（一般用在INPUT和PREROUTING）
+*-o    从网卡流出数据（一般用在OUTPUT和POSTROUTING）
+
+#iptables-svae    输出当前防火墙的规则（可重导向">"到一个文件进行规则备份，
+										方便下面命令使用，推荐以".rules"后缀）
+#iptables-restore    导入防火墙规则（配合重导向"<"用，导入上面备份的文件）
+
+
+TCP Wrapper    轻量级防火墙（与iptables的区别在于，iptables作用在内核，
+								而TCP Wrapper则作用于链接了libwrap.so库的服务,
+								可通过 which 命令查看服务路径，然后通过 ldd 命令查看）
+	配置文件来达到控制访问    *作用顺序 hosts.allow > hosts.deny > 默认为允许
+		/etc/hosts.allow    允许访问
+		/etc/hosts.deny    拒绝访问
+	语法：
+        daemon_list : client_list 
+            daemon_list 指的是服务列表，比如 sshd mysqld之类的服务， ALL作用全部服务
+            client_list 指的是客户端列表，
+                ip             192.168.177.170
+                cidr           192.168.177.0/24
+                作用全部地址    ALL
+                域名
+    例： sshd : 192.168.111.129    对192.168.111.129的主机访问ssh作出相应处理，
+    								处理取决于放在哪个配置文件
+
+
+定时任务
+	配置文件/etc/crontab
+		m       minute(0-59)    分钟  每个小时的第几分钟去执行
+	    h       hour(0-23)      时    第几个小时去执行
+	    dom     day of month(1-31)  一个月的第几天去执行
+	    mon     month(1-12)     第几个月
+	    dow     day of week(0-7)  一个星期的第几天  0=7=星期天
+		user
+		command
+	可执行脚本在/etc/cron.*文件内（有多个）
+
+1#history    查看shell执行历史
+	也可以在用户目录下的.bash_history文件查看
+	有几个环境变量：
+		HISTFILE:       保存历史命令的文件， 默认是 ~/.bash_history
+		HISTFILESIZE:   历史文件中包含的最大行数。
+		HISTSIZE:       history命令中展现的历史数量行数。
+		HISTTIMEFORMAT: 保存历史命令的时间格式。(这个值为空那么将不记录时间)
+		在用户家目录下.bashrc文件内修改
+			例： export HISTTIMEFORMAT="%Y-%m-%d %H:%M:%S"
+
+日志文件：
+	/var/log/messages: 一般的系统日志
+	/var/log/kern.log: 系统内核日志    可以查看是否有硬件非法接入
+	/var/log/boot.log: 系统启动日志    查看是否有非法关机、重启等
+	/var/log/auth.log: 登录相关的日志, 比如ssh/sudo成功失败的日志都在这里
+						查看是否有鉴权操作
+	/var/log/cron.d: cron计划任务的执行日志
+	/var/log/audit/* : 审计文件
+
+查看可疑进程：
+	查看该进程启动的完整命令行:       ps eho command -p $PID
+	查看该进程启动时候所在的目录:     readlink /proc/$PID/cwd
+	查看该进程启动时的完整环境变量:   strings -f /proc/$PID/environ | cut -f2 -d ' '
+	列出该进程所打开的所有文件:       lsof -p $PID
+	查看当前主机的网络连接情况:       netstat -apn | grep $PID
+
+固定IP/静态IP：
+	在/etc/network/interfaces文件内添加
+	auto eth0    
+　　iface eth0 inet static //配置eth0使用默认的静态地址
+　　address 192.168.77.133 //设置eth0的IP地址
+　　netmask 255.255.255.0 //配置eth0的子网掩码
+　　gateway 192.168.77.254 //配置当前主机的默认网关
 
 
 用法1：指令
