@@ -1,0 +1,270 @@
+查看文件状态
+int stat(const char *pathname, struct stat *buf);      常规
+int fstat(int fd, struct stat *buf);                   应用有文件描述符时
+int lstat(const char *pathname, struct stat *buf);     可以识别链接文件
+参数:
+	int fd                   文件描述符
+	const char *pathname     文件名/路径
+	struct stat *buf         结构体，用于存储返回的信息，man 2 stat查看，判断文件类型可以用宏函数
+															类型宏名(获得的类型) 例: S_ISREG(buf->st_mode)
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+查看文件权限
+int access(const char *pathname, int mode);
+参数:
+	const char *pathname     文件名/路径
+	int mode                 需要检测的权限
+		R_OK    读权限
+		W_OK    写权限
+		X_OK    执行
+		F_OK    文件是否存在
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+修改文件大小
+int truncate(const char *path, off_t length);
+int ftruncate(int fd, off_t length);
+参数:
+	int fd              文件描述符
+	const char *path    文件名/目录
+	off_t length        需修改的大小，小于原值则删除至指定大小，反之则扩展
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+修改文件名
+int rename(const char *oldpath, const char *newpath);
+参数:
+	const char *oldpath    原名
+	const char *newpath    新名
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+修改工作目录（作用当前进程）
+int chdir(const char *path);
+int fchdir(int fd);
+参数:
+	int fd              文件描述符，可写标准输入的描述符 STDIN_FILENO
+	const char *path    文件名/路径
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+获取当前工作目录
+char *getcwd(char *buf, size_t size);
+参数:
+	char *buf      用于存储路径
+	size_t size    buf大小
+返回值: 
+	成功返回buf的首地址
+	失败返回NULL并编写error
+
+
+
+拷贝文件描述符
+int dup(int oldfd);
+参数:
+	int oldfd    旧文件描述符
+返回值: 
+	成功返回 新的文件描述符
+	失败返回-1并编写error
+
+
+
+重定向文件描述符
+int dup2(int oldfd, int newfd);
+参数:
+	int oldfd    旧文件描述符
+	int newfd    指定新的文件描述符，如指定的描述符已占用者先关闭占用的文件描述符
+返回值: 
+	成功返回 新的文件描述符
+	失败返回-1并编写error
+
+
+
+改变已打开的文件性质，fcntl针对描述符提供控制。
+int fcntl(int fd, int cmd, ... /* arg */);
+参数: 
+	fd: 操作的文件描述符
+	cmd: 操作方式
+			1) 复制一个现有的描述符（cmd=F_DUPFD）
+			2) 获得／设置文件描述符标记(cmd=F_GETFD或F_SETFD)
+			3) 获得／设置文件状态标记(cmd=F_GETFL或F_SETFL)
+			4) 获得／设置异步I/O所有权(cmd=F_GETOWN或F_SETOWN)
+			5) 获得／设置记录锁(cmd=F_GETLK, F_SETLK或F_SETLKW)
+	arg: 针对cmd的值，fcntl能够接受第三个参数int arg。
+返回值: 
+	成功: 返回某个其他值
+	失败: -1
+
+
+
+创建硬链接
+int link(const char *oldpath, const char *newpath);
+参数:
+	const char *oldpath    源文件名
+	const char *newpath    硬链接名
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+创建软链接
+int symlink(const char *target, const char *linkpath);
+参数:
+	const char *target      源文件名
+	const char *linkpath    硬链接名
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+删除软链接
+int unlink(const char *pathname);
+参数:
+	const char *pathname    软链接名/路径
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+创建目录
+int mkdir(const char *pathname, mode_t mode);
+参数:
+	const char *pathname    文件名/路径
+	mode_t mode             文件权限，八进制数
+返回值: 
+	成功返回0
+	失败返回-1并编写error
+
+
+
+打开目录
+DIR *opendir(const char *name);
+读取目录
+struct dirent *readdir(DIR *dirp);   结构体需去man查
+关闭目录
+int closedir(DIR *dirp);
+
+
+
+
+
+
+进程: 
+
+创建子进程
+pid_t fork(void);
+返回值: 
+	成功 父进程返回子进程id，子进程返回0
+	失败返回-1并编写error
+
+pid_t vfork(void);
+	与fork的区别在于，vfork不会另外创建一个地址空间，在调用exec或exit前使用父进程的地址空间，
+	在调用exec或exit前父进程不会继续执行下面的代码
+	如不调用exec或exit子进程会见父进程的地址空间释放，当父进程释放是会出现段错误
+返回值: 
+	成功 父进程返回子进程id，子进程返回0
+	失败返回-1并编写error
+
+
+回收子进程资源
+pid_t wait(int *status);等待子进程结束并回收资源(阻塞)
+参数:
+	int *status    保存子进程退出的状态信息，可使用特定宏取出相应信息，可写NULL
+			WIFEXITED(status)   判断子进程释放正常返回，是则true
+			WEXITSTATUS(status)    获取子进程的return返回值
+返回值: 
+	成功返回 子进程ID
+	失败返回 -1
+
+
+
+pid_t waitpid(pid_t pid, int *status, int options);
+参数:
+	pid_t pid      进程号
+		>0     指定进程; 
+		=0     同一 进程组 
+		=-1    任意子进程 * 
+		<-1    指定 进程组，绝对值
+	int *status    保存子进程退出的状态信息，可使用特定宏取出相应信息，可写NULL
+		WIFEXITED(status)      判断子进程释放正常返回，是则true
+		WEXITSTATUS(status)    获取子进程的return返回值
+		...    man查
+	int options    细化操作
+		0    与wait相同(阻塞)
+		WNOHANG    不阻塞，立即返回，=0还有存活的进程; <0没有子进程; >0回收进程的id *
+返回值: 
+	成功返回 子进程ID
+	失败返回 -1并编写error
+
+
+
+启动进程exec族: 
+启动指定指定程序: 
+int execl(const char *path, const char *arg, .../* (char  *) NULL */);
+参数:
+	const char *path        程序路径
+	const char *arg         程序名
+	...                     为程序传参
+	/* (char  *) NULL */    最后加上NULL结尾，参数列表 必须 加上一个NULL参数结尾
+返回值:
+	成功 不返回，一去不复返
+	失败返回 -1并编写error
+
+int execlp(const char *file, const char *arg, .../* (char  *) NULL */);
+参数:
+	const char *file        程序名，与上面函数的区别: 自动从PATH环境变量中寻找
+	const char *arg         程序名
+	...                     为程序传参
+	/* (char  *) NULL */    最后加上NULL结尾，参数列表 必须 加上一个NULL参数结尾
+返回值:
+	成功 不返回，一去不复返
+	失败返回 -1并编写error
+
+int execle(const char *path, const char *arg, .../*, (char *) NULL, char * const envp[] */);
+参数:
+	const char *file          程序名
+	const char *arg           程序名
+	...                       为程序传参
+	/*, (char *) NULL         最后加上NULL结尾，参数列表 必须 加上一个NULL参数结尾
+	char * const envp[] */    可用于修改环境变量
+返回值:
+	成功 不返回，一去不复返
+	失败返回 -1并编写error
+
+
+
+进程间通信:
+
+无名管道:
+int pipe(int pipefd[2]);
+参数:
+	int pipefd[2]    用于存储读写端
+		pipefd[0]
+		pipefd[2]
+返回值:
+	成功返回0
+	失败返回-1并编写error
+
+
+
+
+

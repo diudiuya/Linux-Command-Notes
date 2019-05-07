@@ -165,12 +165,19 @@ ctrl + r    搜索输入记录
 
 5#find    查找文件
 *-neme    按文件名称进行搜索(支持模糊搜索)
-*-type    按文件类型进行搜索(f为文件,d为目录)
-*-size    按类型查找
-*-ctime    按时间
-	find /etc -type d    在/etc目录下查找所有目录
-	find /etc -type f    在/etc目录下查找所有文件
+*-type    按文件类型进行搜索(f为文件,d为目录,l链接,b块设备,p管道,s套接字,c字符设备)
+*-size    按类型大小
+*-ctime    创建日期(-为指定日期以内的时间，+为指定日期以外的时间，默认单位 天 )
+*-mtime    修改日期
+*-atime    访问日期
+*-maxdepth    限定最深层数(即以搜索目录为基准进入几级目录)
+*-mindepth    指定最浅层数
+	find /etc -type d               在/etc目录下查找所有目录
+	find /etc -type f               在/etc目录下查找所有文件
 	find /etc -neme 文件名\目录名    在/etc目录下查找指定 文件\目录
+	find /etc -size +10M            查找/etc目录下大于10M的文件\目录(+为大于，-为小于; 默认单位k)
+	find /etc -ctime -1             查找一天以内创建的
+	find /etc -maxdepth 4           查找最大4级目录以内的所有文件
 !!范围 选项 对象
 
 5#service    控制软件服务的启动\停止\重启
@@ -334,8 +341,29 @@ ctrl + r    搜索输入记录
 
 1#w    查看当前登录的用户、ip及正在执行的命令（就一个字母w）
 
-#top    查看当前启动的进程（具体参数百度）
+1#top    查看当前启动的进程（具体参数百度）
 
+23#ping    ping pong包
+*-c    指定发送“echo request”数据包总量
+*-s    指定每个数据包的大小，默认56
+*-I    设置源地址或网络接口
+!ip
+!域名
+
+23#fping    ping多个地址
+*-g    ping网段  格式: ip/掩码
+!IP地址 IP地址
+
+#arping    测试ip冲突
+
+#curl    下载指定链接下的内容
+!域名、ip
+
+#file    识别文件类型
+!文件名
+
+#hd    将二进制文件以十六进制的方式输出
+!文件名
 
 
 用法1：指令
@@ -414,6 +442,24 @@ setcap    为程序设置特权
 #chsh    更改shell
 *-s    指定新shell路径
 !用户名
+
+#nmap    端口扫描
+*-p    指定端口
+*-sP    以ping的方式判断目标是否在线存活
+*-sT    以TCP连接的方式扫描目标，直接调用connect命令
+*-sS    以TCP的syn扫描，（只是发起第一次握手报文syn报文，等待第二次握手报文返回，
+						不会再发送第三次握手。服务器感知不到，未完成三次握手，
+						accept就不会返回连接。 优先使用-sS，不行在用-sT）
+*-sU    以UDP的方式扫描目标,一般不会响应，如果目标没开启任何服务会响应一个icmp报文
+*-O    收集指纹，匹配nmap自己的 数据库，确定 操作系统 类型，对linux正确率不高,(大写字母o)
+*-sV    与-O类似，加了版本检测，获取到服务的版本号等信息
+!ip、域名
+!网段    ip/掩码
+
+#p0f    被动探测系统类型（只要有请求进来，就可以获取发请求主机的信息）中间是数字0
+*-f    指定指纹文件，系统有一个自带的可以使用/etc/p0f/p0f.fp
+*-i    等待监听的网卡（即接受请求的网卡）
+
 
 
 防火墙：
@@ -505,9 +551,96 @@ TCP Wrapper    轻量级防火墙（与iptables的区别在于，iptables作用�
 　　gateway 192.168.77.254 //配置当前主机的默认网关
 
 
+
+
+
+域名收集：
+2#dnsenum    枚举dns的信息
+*--enum
+!域名
+	例: dnsenum --enum 163.com    查看163的dns解析信息
+	记录含义：
+		A类记录（ip地址）
+    	dns 记录
+    	MX记录（作为电子邮件服务器的时候IP地址）
+
+2#nslookup    获取基本的A记录
+!域名
+
+2#whois    列出域名的相关信息、如注册信息等
+!域名
+
+2#traceroute    探测到达域名地址需要经过多少跳，及经过多少路由等
+!域名
+
+
+暴力破解：
+#hydra
+*-l    指定单个用户名（小写字母）
+*-L    指定用户名字典（用户名列表，即文本文档之类的）
+*-p    指定单个用户口令（小写字母）
+*-P    指定用户口令字典（用户口令列表，同用户名）
+*-t    指定并行任务数量，默认16
+*-e    额外检查，n 代表空口令， s代码用户名， r代码用户名称逆序（反向）
+*-vV    显示详细过程
+*-o    输出login/passwd 对到指定的文件，即将结果输出到文件
+*IP    靶机IP地址
+*ssh    被攻击的协议（服务名称， telnet、ftp、pop3、ssh...）
+	例: hydra -l msfadmin -P passwd.txt -e nsr -vV -o ssh_ok.log  192.168.16.204 ssh
+
+#hashcat    破解哈希值
+	语法: hashcat [options] hashfile [mask|wordfiles|directories]
+*-m    指定算法类型, Ubuntu默认使用sha-512，值用1800
+--show    直接显示在终端
+	例: hashcat -m 1800 哈希值列表文件 密码字典
+
+#dirb    暴力检索隐藏链接（即用url_base与wordlist_file内的字符串拼接，
+							并发出请求等待响应结果）
+		/usr/share/wordlist/dirb/下有自带字典，也可以在SVN Digger项目下找开源的字典
+	语法: dirb <url_base> <url_base> [<wordlist_file(s)>] [options]
+	例: dirb http://testphp.vulnweb.com/ 
+		dirb http://testphp.vulnweb.com/ ./wordlist_file
+
+
+口令字典工具:
+crunch    枚举生成字符集
+	语法: crunch <min-len> <max-len> [<charset string>] [options]
+		<min-len>    最小长度
+		<max-len>    最大长度
+		[<charset string>]    字符集， 可用-f指定字符集在man文档内看详细
+		[options]
+	例: crunch 2 3 1234    将字符1、2、3、4以两位数到三位数进行排列组合
+
+2#cupp
+*-i    交互生成字典，即根据你输入的信息进行组合序列
+*-l    从cupp数据库下载
+
+
+arp欺骗：
+#arpspoof
+	语法: arpspoof [-i interface] [-c own|host|both] [-t target] [-r] host
+*-i    指定本机网卡名
+*-t    指定目标ip 伪装的主机ip或网关
+	例: arpspoof -i eth0(本机网卡) -t 192.168.111.135(目标) 192.168.111.129(伪装)
+		将/proc/sys/net/ipv4/ip_forward文件设为1则可以实现转发
+
+#arp
+*-s    将ip与mac关联（一般用来写死网关或共享硬件如打印机等）  如: ip mac
+*-f    读取文件列表， 文件格式同上，一个关联写一行
+
+
+netwox工具箱:
+	netwox进入交互页面，3是查看工具列表，0退出
+	73是synflood攻击
+	netwox id --help|--help2    查看指定id的工具详细用法
+
+
 用法1：指令
 用法2：指令 [操作对象]
 用法3：指令 [选项] [操作对象]
 用法4：指令 [选项]
 用法5：指令 [操作对象] [选项]
+
+
+
 
