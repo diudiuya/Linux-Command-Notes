@@ -1,0 +1,483 @@
+宏:
+INET_ADDRSTRLEN  宏的值 16, ipv4地址大小
+INADDR_ANY 通配地址,值为0, IP地址0.0.0.0
+
+
+
+头文件:
+#include <sys/socket.h>            11
+#include <arpa/inet.h>             12
+#include <sys/select.h>            13
+#include <sys/poll.h>              14
+#include <sys/epoll.h>             15
+#include <sys/types.h>             16
+
+
+IPv4结构体， man 7 ip查看
+struct sockaddr_in {
+	sa_family_t sin_family;     /* 地址族: AF_INET */        AF_INET
+	u_int16_t sin_port;         /* 按网络字节次序的端口 */    
+	struct in_addr sin_addr;    /* internet地址 */
+};
+/* Internet地址. */
+struct in_addr {
+	u_int32_t s_addr;            /* 按网络字节次序的地址 */
+};
+
+
+本地套接字结构体
+#define UNIX_PATH_MAX   108
+
+struct sockaddr_un {
+sa_family_t     sun_family;         /* AF_UNIX */
+char    sun_path[UNIX_PATH_MAX];    /* 路径名 */
+};
+
+
+
+网络字节序<==>主机字节序
+网络字节序<--主机字节序
+uint32_t htonl(uint32_t hostlong);     四个字节，长整型  --  12
+uint16_t htons(uint16_t hostshort);    两个字节，短整形  --  12
+
+网络字节序-->主机字节序
+uint32_t ntohl(uint32_t netlong);     四个字节，长整型  --  12
+uint16_t ntohs(uint16_t netshort);    两个字节，短整形  --  12
+
+
+
+ip-->32位网络数据
+int inet_pton(int af, const char *src, void *dst);  --  12
+参数:
+	int af             协议版本
+		AF_INET     Ipv4
+		AF_INET6    Ipv6
+	const char *src    ip地址字符串
+	void *dst          网络字节序，传出参数
+返回值:
+	成功返回 1
+	src为空返回 0
+	失败返回 -1并编写error为EAFNOSUPPORT
+
+
+
+32位网络数据-->ip
+const char *inet_ntop(int af, const void *src, 
+						char *dst, socklen_t size);  --  12
+参数:
+	int af             协议版本
+		AF_INET     Ipv4
+		AF_INET6    Ipv6
+	const void *src    网络字节序
+	char *dst          存放ip地址的字符串，传出参数，INET_ADDRSTRLEN 宏的值16
+	socklen_t size     上面字符串大小
+返回值:
+	成功返回 dst首地址
+	失败返回 -1并编写error
+
+
+
+
+
+
+
+
+服务器:
+	普通:
+		套接字 --> 绑定 --> 设置服务器监听套接字 --> 循环提取 -
+		-> 创建线程或进程处理 --> 读写 --> 关闭
+	select:
+		套接字 --> 绑定 --> 设置服务器监听套接字 --> 循环select监听 -
+		-> 提取(分别处理lfd和cfd) --> 关闭
+
+
+
+客户端:
+	套接字 --> [绑定] --> 连接 --> 读写 --> 关闭
+
+套接字
+int socket(int domain, int type, int protocol);  --  11
+参数:
+	int domain      指定协议族
+		AF_INET     ipv4
+		AF_INET6    ipv6
+		AF_UNIX     本地
+	int type        套接字类型
+		SOCK_STREAM    字节流套接字，一般用于TCP
+		SOCK_DGRAM     数据报套接字，一般用于UDP
+		SOCK_RAW       原始套接字
+		AF_UNIX        本地套接字
+	int protocol    可设置为0，表示选择当前family和type组合下protocol的系统默认值
+		一般写0
+		IPPROTO_TCP
+		IPPTOTO_UDP
+		IPPROTO_SCTP
+		IPPROTO_TIPCTCP
+返回值:
+	成功返回 套接字描述符
+	失败返回 -1并编写error
+
+
+
+请求连接
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);  --  11
+参数:
+	int sockfd                     套接字文件描述符
+	const struct sockaddr *addr    ip结构体，指定需要连接的服务器地址和端口号，需要强转
+	socklen_t addrlen              结构体大小
+返回值:
+	成功返回 0
+	失败返回 -1并编写error
+
+
+
+
+绑定固定IP与端口
+int bind(int sockfd, struct sockaddr *my_addr, socklen_t addrlen);  --  11
+参数:
+	int sockfd                     套接字文件描述符
+	struct sockaddr *my_addr       ip结构体，自己的地址和端口号，需要强转
+	socklen_t addrlen              结构体大小
+返回值:
+	成功返回 0
+	失败返回 -1并编写error
+
+
+
+监听套接字
+int listen(int sockfd, int backlog);
+参数:
+	int sockfd     套接字文件描述符
+	int backlog    可以排队的最大连接个数，即已完成与未完成队列的总和数，内核默认最大值128(可修改，自行百度)
+返回值:
+	成功返回 0
+	失败返回 -1并编写error
+
+
+
+提起链接，默认阻塞
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);  --  11
+参数:
+	int sockfd                     套接字文件描述符，监听套接字
+	struct sockaddr *addr          ip结构体，新建套接字的地址和端口号，需要强转，传出参数
+	socklen_t addrlen              结构体大小
+返回值:
+	成功返回 新建的套接字
+	失败返回 -1
+
+
+
+
+
+
+
+
+
+
+多路IO转接技术(多路IO复用技术)
+
+监听文件描述符属性变化
+int select(int nfds, fd_set *readfds, fd_set *writefds,
+			fd_set *exceptfds, struct timeval *timeout);  --  13
+参数:
+	int nfds                   需监听的文件描述符个数，一般是文件描述符最大值加1
+	fd_set *readfds            需要监听 读属性 的文件描述符集合，
+								传入传出参数，传入需监听的集合，传出变化的集合，下面相同
+	fd_set *writefds           需要监听 写属性 的文件描述符集合
+	fd_set *exceptfds          需要监听 异常 的文件描述符集合
+	struct timeval *timeout    监听时间
+		NULL    永久监测
+		= 0     不等待，直接返回
+		>0: 
+			struct timeval {
+				long tv_sec;     /*秒 seconds */
+				long tv_usec;    /*微秒 microseconds */
+			};
+返回值:
+	成功返回 三个集合的变化描述符个数，超时放回0
+	失败返回 -1并编写error
+
+
+
+文件描述符集合操作:
+void FD_ZERO(fd_set *set);             //清空集合
+
+void FD_SET(int fd, fd_set *set);      //将指定描述符 添加 到集合中
+
+void FD_CLR(int fd, fd_set *set);      //从集合中 去除 指定文件描述符
+
+int  FD_ISSET(int fd, fd_set *set);    //判断集合中是否存在指定描述符
+存在着返回true，失败返回
+
+
+
+
+int poll(struct pollfd *fds, nfds_t nfds, int timeout);  --  14
+参数:
+	struct pollfd *fds    需要监听的文件描述符结构体数组
+		struct pollfd {
+			int   fd;         /*需要监听的文件描述符 file descriptor */
+				如果是-1表示没有需要监听的描述符，poll函数检测到-1则停止监听后面的
+			short events;     /*需要监听的事件 requested events */
+				POLLIN     读事件
+				POLLOUT    写事件, 需同时监听可位或操作 “|”
+			short revents;    /*返回变化的事件 returned events */
+				如同时监听两个以上事件时需 位运算 取出响应的事件
+		};
+	nfds_t nfds           需监听的文件描述符个数，一般是有效元素数组下标加一
+	int timeout           需监听的时间
+		== -1    永久监听
+		== 0     立即返回，不等待
+		> 0      你懂的，单位是 毫秒
+
+返回值:
+	成功返回 变化的描述符个数，超时放回0
+	失败返回 -1并编写error
+
+
+
+
+epoll:
+创建树 --> 上树 --> 监听
+
+创建红黑树
+int epoll_create(int size);  --  15
+参数:
+	int size    节点数，一般 大于0 即可，会自动增长
+
+返回值:
+	成功返回 非负数的文件描述符，树的根节点，句柄
+	失败返回 -1并编写error
+
+
+
+节点的 上树、下树、修改
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);  --  15
+参数:
+	int epfd                     树的根节点, 即创建树时得到的句柄
+	int op                       需要对节点操作的动作
+		EPOLL_CTL_ADD    添加, 即上树
+		EPOLL_CTL_DEL    删除, 即下树
+		EPOLL_CTL_MOD    修改
+		F_SETFL          边沿触发，工作模式，与添加位或即可
+	int fd                       需要操作的文件描述符
+	struct epoll_event *event    需要监听的事件
+	-----------------------------------------
+		typedef union epoll_data {
+			void        *ptr;   用于反应堆
+			int          fd;    文件描述符
+			uint32_t     u32;
+			uint64_t     u64;
+		} epoll_data_t;
+		----------------------------------
+		struct epoll_event {
+			uint32_t     events;      /*需要监听的事件 Epoll events */
+				EPOLLIN     读事件
+				EPOLLOUT    写事件
+			epoll_data_t data;        /*共用体, 需要监听的对象 User data variable */
+		};
+
+返回值:
+	成功返回 0
+	失败返回 -1并编写error
+
+
+
+监听
+int epoll_wait(int epfd, struct epoll_event *events,
+					int maxevents, int timeout);  --  15
+参数:
+	int epfd                     树的根节点, 即创建树时得到的句柄
+	struct epoll_event *event    传出参数, 监听到变化的结构体数组首地址, 结构体同上
+	int maxevents                指定上面数组最大可返回的个数
+	int timeout                  等待时间
+		== -1    永久监听
+		== 0     立即返回，不等待
+		> 0      你懂的，单位是 毫秒
+
+返回值:
+	成功返回 变化的描述符个数，超时放回0
+	失败返回 -1并编写error
+
+
+
+
+读写:
+
+TCP发送
+int send(int s, const void *msg, size_t len, int flags);  --  15  --  16
+UDP发送
+int sendto(int s, const void *msg, size_t len, int flags, 
+			const struct sockaddr *to, socklen_t tolen);  --  15  --  16
+参数:
+	int s                        目标套接字
+	const void *msg              需要发送的内容
+	size_t len                   上面内容的长度
+	int flags                    标志位, 一般写 0 , 如果为 1 则是紧急数据
+	const struct sockaddr *to    协议结构体, 如IPv4的, 需强转
+	socklen_t tolen              上面结构体的长度
+
+返回值:
+	成功返回 发送出去数据的字节数
+	失败返回 -1并编写error
+
+
+TCP接收
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);  --  15  --  16
+UDP接收
+ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+				struct sockaddr *src_addr, socklen_t *addrlen);  --  15  --  16
+参数:
+	int s                        目标套接字
+	const void *msg              需存放内容的空间
+	size_t len                   上面空间的长度
+	int flags                    标志位, 一般写 0, MSG_PEEK 偷窥数据
+	struct sockaddr *src_addr    协议结构体, 如IPv4的, 需强转
+	socklen_t *addrlen           上面结构体的长度, 需一个空间存放
+
+返回值:
+	成功返回 接收到数据的字节数，如果为0则对方关闭
+	失败返回 -1并编写erro
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+libevent:
+	创建事件库 --> 初始化节点(设置回调) --> 将节点添加入事件库 --> 监听事件库 --> 释放节点 -
+	-> 释放事件库
+
+创建事件库句柄:
+struct event_base *event_base_new(void);
+参数:
+	无
+返回值:
+	成功返回 句柄
+	失败返回 NULL
+
+
+
+初始化事件节点
+typedef void (*event_callback_fn)(evutil_socket_t, short, void *);回调函数原型
+struct event *event_new(struct event_base *base, \
+						evutil_socket_t fd, short events, \
+						event_callback_fn callback, void *callback_arg);
+参数:
+	struct event_base *base       事件库句柄
+	evutil_socket_t fd            需要监听的文件描述符
+	short events                  需要监听的事件
+		#define EV_TIMEOUT  0x01    超时 事件
+			|	EV_READ     0x02    读 事件
+			|	EV_WRITE    0x04    写 事件
+			|	EV_SIGNAL   0x08    信号 事件
+			|	EV_PERSIST  0x10    周期性触发
+			|	EV_ET       0x20    边沿触发
+	event_callback_fn callback    回调函数
+	void *callback_arg            回调函数的传参
+返回值:
+	成功返回 struct event类型的节点地址
+	失败返回 NULL
+
+
+
+添加事件到事件库
+int event_add(struct event *ev, const struct timeval *timeout);
+参数:
+	struct event *ev                 event_new()所得的
+	const struct timeval *timeout    等待事件的最大时间
+		NULL    永久
+		> 0     结构体查看event_base_loopexit()
+
+返回值:
+	成功返回 0
+	失败返回 -1
+
+
+
+从事件库中删除事件
+int event_del(struct event *);
+参数:
+	struct event *ev    event_new()所得的
+返回值:
+	成功返回 0
+	失败返回 -1
+
+
+
+释放事件节点
+void event_free(struct event *ev);
+参数:
+	struct event *ev    event_new()所得的
+返回值:
+	无
+
+
+
+循环监听事件
+int event_base_dispatch(struct event_base *base);
+参数:
+	struct event_base *base    事件库句柄
+返回值:
+	成功返回 0
+	没有可检测的则返回 1
+	失败返回 -1
+
+
+
+结束循环监听
+int event_base_loopexit(struct event_base *base, 
+						const struct timeval *tv);    定时结束
+						等待回调执行完成后结束, 如tv不为NULL则等待指定事件后立即结束
+int event_base_loopbreak(struct event_base *base);    立即结束
+参数: 
+	struct event_base *base
+	const struct timeval *tv
+		struct timeval {
+			long    tv_sec;     秒
+			long    tv_usec;    微秒
+		};
+
+返回值:
+	成功返回 0
+	失败返回 -1
+
+
+
+释放事件库
+void event_base_free(struct event_base *);
+参数:
+	struct event_base *    事件库句柄
+返回值:
+	无
+
+
+
+
+befferevent:
+
+初始化事件节点
