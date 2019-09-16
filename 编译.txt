@@ -1,0 +1,197 @@
+man.linuxde.net    查Linux命令网站
+
+ctrl + p    上
+ctrl + n    下
+ctrl + b    左
+ctrl + f    右
+ctrl +u    删除
+ctrl + e    行尾
+ctrl + a    行首
+
+指令 [选项] [操作对象]
+  空      *           ！
+
+用法1：指令；
+用法2：指令 [操作对象]；
+用法3：指令 [选项] [操作对象]；
+用法4：指令[选项]
+用法5：指令 [操作对象] [选项]
+
+
+234#gcc或g++    编译命令
+*-E    生成预处理文件(.i)
+*-S    生成汇编文件(.s)
+*-c    生成二进制文件(.o)
+*-o    生成指定文件
+*-v    查看版本号
+*-g    含调试信息,用于gdb调试
+*-D    编译时动态定义宏
+*-On    编译优化,n是1~3,越大优化越多(默认为2)
+*-Wall    提示更多警告信息
+*-static    指定生成静态链接
+*-l    指定库文件（小写L）（与大写的L配合用）
+*-L    指定库文件路径
+*-fPIC    创建与地址无关的编译程序(一般与生成动态库一起用)
+*-shared    指定生成动态链接库
+*-I    指定头文件所在位置
+
+!*.c
+!*.c -* *.out\*.i\*.s\*.o
+
+
+例:
+gcc -E main.c -o a.i
+gcc -S main.c -o a.s
+gcc -c main.c -o a.o
+gcc main.c
+gcc main.c -o a.out
+gcc -v
+gcc -static
+
+gcc -o a.out main.c -L ./ -l add
+gcc main.c -L ./ -l add
+
+
+gcc -fPIC -shared libadd.so add.c    编译成动态库
+gcc -shared add.o add2.o add3.o -o libadd.so(*.o文件需含-fPIC编译过得)
+
+
+
+#gdb    调试工具
+
+	list n或l n    列出代码，n为数值，从n行开始列出
+	set args 参数1 参数2...    给程序传参
+	show args    查看传入的参数
+	break n或b n    设置断点，n为数值也可以是函数名，在n行或函数入口设置断点
+	break或b 行号 if 条件    条件断点如：b 41 if a ==5
+	info break或i b    查看断点信息
+	delete n或d n    删除断点
+	run或r    运行(技巧:1/可以使用它判断错误,会在错误行停下 2/可以在后面写参数类似set args)
+	step或s    单步执行(当遇到函数时会进入函数执行)(待验证)
+	start    从main函数开始
+	next或n    下一步直接执行下一步
+	finish    结束当前函数查看,返回调用点
+	until n
+	print 变量名或p 变量名    打印变量当前值
+	ptype 变量名    查看变量类型
+	continue或c    继续执行断点后续指令
+	backtrace或bt    查看栈帧测层次
+	frame n或f n    切换栈帧,与上面明显配合使用,n为栈帧编号bt可查
+	display 变量名    设置跟踪变量
+	undisplay 编号    取消跟踪变量
+	
+	quit或q    退出gdb
+
+
+
+
+
+#Makefile
+
+*-n    模拟要做的事情,即列出会做的事情,并不会执行
+
+	$(变量)    取值
+
+	一个规则:
+		目标:依赖
+		缩进 命令
+
+		(依赖和命令可有多个或无)
+		终极目标默认为第一个,ALL:可以指定终极目标
+
+	两个函数:
+		1/wildcard    通配符
+			aa = $(wildcard ./*.c)  匹配当前目录下所有.c文件生成列表并返回
+						等价: aa = a.c b.c c.c
+
+		2/patsubst    替换
+			bb = $(patsubst %.c, %.o,$(aa))    将aa字符列表里所有.c替换成.o并返回
+							   等价于: bb = a.o b.o c.o
+
+
+
+	三个变量:
+		$@
+		$^
+		$<
+	
+
+
+
+
+
+静态库文件:
+前缀lib
+中间库名
+后缀.a
+如:libadd.a
+
+
+动态库文件:
+前缀lib
+中间库名
+后缀.so
+如:libadd.so
+
+先后搜索elf文件的
+1— DT_RPATH段 
+2— 环境变量LD_LIBRARY_PATH 
+3— /etc/ld.so.cache文件列表 
+4— /lib/ /usr/lib目录找到库文件后将其载入内存
+
+加载失败解决方案：
+	1/将动态库文件拷贝到/lib或/usr/lib目录下,如不行在输入ldconfig(不推荐,修改了系统的东西)
+	2/修改环境变量
+		1/临时:export LD_LIBRARY_PATH=动态库文件目录(修改当前进程的环境变量,即当前终端关闭则失效)
+		2/永久:修改shell配置文件
+			1/修改当前用户shell的配置文件:进入用户家目录下的shell配置文件如:~/bashrc,
+			  在文件末尾写入同上语句,保存退出后输入source .bashrc或 . .bashrc(source详解在下方)
+			2/修改作用所有用户的环境变量文件:进入/etc/profile目录,方法同上
+	3/修改动态库配置文件:进入/etc/ld.so.conf目录,在文件尾行添加需要使用的动态库路径,保存退出输入ldconfig
+	4/改变程序里DT_RPATH的值(不会,  (*^__^*) 嘻嘻)
+
+
+#ar
+*-t    查看静态库列表
+
+将二进制文件打包成静态库:
+	ar -cvr libadd.a add.o
+
+!二进制文件(.o) 
+
+
+
+
+#nm    查看静态库的函数
+!静态库名
+
+ 
+
+#env    显示当前系统所有环境变量
+
+
+#echo    输出 
+!$环境变量名    输出环境变量内容
+
+
+#source    点命令
+	source命令也称为“点命令”，也就是一个点符号（.）。source命令通常用于重新执行刚修改的初始化文件，使之立即生效，而不必注销并重新登录。
+	用法： source filename 或 . filenam
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
