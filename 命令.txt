@@ -77,6 +77,21 @@ ctrl + r    搜索输入记录
 *-n    显示匹配内容的行号
 *-i    忽略大小写
 
+压缩包:
+*.tar    tar -xf或tar -xvf
+*.gz    gzip -d或gunzip
+*.tar.gz和*.tgz    tar -xzf
+*.bz2    bzip2 -d或bunzip2
+*.tar.bz2    tar -xjf
+*.Z    uncompress
+*.tar.Z    tar -xZf
+*.rar    unrar e
+*.zip    unzip
+
+#tar    打包解包解压
+*-x    解压
+*-z    解压*.tar.gz类型的包
+
 
 
 二、进阶指令
