@@ -1,0 +1,86 @@
+db    查看当前数据库名称
+
+show dbs    列出所有在物理上存在的数据库
+
+use 数据库名    切换数据库, (可当做创建, 直接 "use 需要的数据名" 即可)
+
+db.dropDatabase()    删除数据库
+
+
+
+
+
+db.createCollection(name, options)    创建集合
+	name: 集合名
+	options: [可选项]指定纸盒的配置信息
+	例:
+		db.createCollection("stu")    创建名为stu的集合
+		db.createCollection("sub", {capped: true, size: 10})
+			创建名为sub的集合, capped默认为false表示不设置上限
+			size则当capped为true时, 需要指定此参数,表示上限大小, 
+			当文档达到上限时, 会将之前的数据覆盖, 单位为字节
+
+db.集合名称.drop()    删除集合
+
+show collections    查看当前数据库的集合
+
+
+
+
+
+db.集合名称.insert({键值对})    插入语句, 括号内写json
+	db.stu.insert({name:'nihao', age:'man'})
+		在stu集合内插入{name:'nihao', age:'man'}
+
+db.集合名称.update({修改前内容}, {修改后内容}, {是否修改多条'可选'})    更新数据
+	db.stu.update({name:'nihao'}, {name:'nihaoya'})
+		修改含name:'nihao'属性的文档为name:'nihaoya', 只修改匹配的第一条
+	db.stu.update({name:'nihao'}, {$set:{name:'nihaoya'}}, {multi:true})
+		修改name:'nihao'属性的为name:'nihaoya', 修改所有匹配的数据, (multi默认为falst)
+		$set:{键值对}则是限定修改内容, 如上一句则会将匹配的文档整个修改, 
+		而加了限定的则只修改文档中匹配的属性
+	db.stu.update({}, {$set:{name:'ni'}})
+
+db.集合名称.remove({条件}, {'可选'})    删除文档
+	db.stu.remove({name:'ni'}, {justOne:true})
+		删除含name:'ni'属性的文档, 
+		justOne默认为false表示删除多条, 设为true或1则表示删除一条
+	db.stu.remove({})
+		删除全部文档
+
+
+db.集合名称.find({条件文档})    简单查询, 返回所有文档(条件文档可为空)
+db.集合名称.find({条件文档}).pretty()    格式化显示(就后面加一个.pretty())
+db.集合名称.findOne({条件文档})    返回一个文档的数据
+
+
+
+运算:
+	比较:
+		默认    等于
+			db.stu.find({age:23})    查询age等于23的
+		$ne    不等于
+			db.stu.find({age:{$ne:23}})    查询age不等于23的
+		$lt    小于
+			db.stu.find({age:{$lt:23}})    查询age小于23的
+		$lte    小于等于
+			db.stu.find({age:{$lte:23}})    查询age小于等于23的
+		$gt    大于
+			db.stu.find({age:{$gt:23}})    查询age大于23的
+		$gte    大于等于
+			db.stu.find({age:{$gte:23}})    查询age大于等于23的
+	
+	逻辑:
+		默认    与
+			db.stu.find({age:{$gt:23}, sex: 1})    查询age大于23并且sex等于1的
+		$or    或
+			db.stu.find({$or:[{age:23}, {sex: 1}]})    查询age等于23或者sex等于1的
+	
+	范围:
+		$in    在范围内
+			db.stu.find({age:{$in:[23, 65]})    查询age等于23或者等于65的
+		$nin    不在范围内
+			db.stu.find({age:{$in:[23, 65]})    查询age不等于23并且不等于65的
+
+
+
